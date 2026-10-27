@@ -139,7 +139,9 @@ fun SettingsScreen() {
 
                         if (hasError) return@FocusableButton
 
-                        (context as? ComponentActivity)?.lifecycleScope?.launch {
+                        val activity = context as? ComponentActivity
+                        activity?.lifecycleScope?.launch {
+                            // Finishing destroys lifecycleScope, so close only after everything is written
                             kioskSettings.setCheckInterval(checkIntervalValue!! * 1000L)
                             kioskSettings.setStartUrl(kioskUrl)
                             kioskSettings.setRotation(rotation)
@@ -148,8 +150,8 @@ fun SettingsScreen() {
                             kioskSettings.setActiveBrightness(activeBrightnessValue!!)
 
                             StayOnTopService.restart(context)
+                            activity.finish()
                         }
-                        (context as? ComponentActivity)?.finish()
                     },
                     background = MaterialTheme.colorScheme.primary
                 )

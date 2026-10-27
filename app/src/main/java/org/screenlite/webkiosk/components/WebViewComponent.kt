@@ -12,10 +12,23 @@ import org.screenlite.webkiosk.app.WebViewManager
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +55,7 @@ fun WebViewComponent(
     var rotation: Rotation by remember { mutableStateOf(Rotation.ROTATION_0) }
     var retryCount by remember { mutableIntStateOf(0) }
     var retryTrigger by remember { mutableIntStateOf(0) }
+    var snapshot by remember { mutableStateOf<ImageBitmap?>(null) }
 
     val webViewManager = remember {
         WebViewManager(
@@ -60,6 +74,9 @@ fun WebViewComponent(
                     hasLoadedPage = true
                     Log.d(TAG, "Page loaded successfully")
                 }
+            },
+            onSnapshot = { bitmap ->
+                snapshot = bitmap?.asImageBitmap()
             }
         )
     }
@@ -150,8 +167,16 @@ fun WebViewComponent(
             })
     }
 
-    when {
-        hasError -> Box(
+    AnimatedVisibility(
+        visible = isLoading && !hasError,
+        enter = EnterTransition.None,
+        exit = fadeOut(tween(400))
+    ) {
+        LoadingOverlay(snapshot)
+    }
+
+    if (hasError) {
+        Box(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black),
@@ -160,15 +185,41 @@ fun WebViewComponent(
             Log.w(TAG, "Showing connection error UI")
             Text("Connection error\nRetrying...", color = Color.White)
         }
+    }
+}
 
-        isLoading -> Box(
+@Composable
+private fun LoadingOverlay(snapshot: ImageBitmap?) {
+    if (snapshot != null) {
+        // Keep the previous page on screen until the new one is ready
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.White)
+        ) {
+            Image(
+                bitmap = snapshot,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds
+            )
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .align(Alignment.TopCenter),
+                color = Color.White.copy(alpha = 0.8f),
+                trackColor = Color.Transparent
+            )
+        }
+    } else {
+        Box(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            Log.d(TAG, "Showing loading UI")
-            Text("Loading...", color = Color.White)
+            CircularProgressIndicator(color = Color.White)
         }
     }
 }
