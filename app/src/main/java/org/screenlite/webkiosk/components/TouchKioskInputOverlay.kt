@@ -13,7 +13,8 @@ import androidx.compose.ui.unit.dp
 fun TouchKioskInputOverlay(
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
-    touchAreaSize: Dp = 100.dp,
+    // Taps on it never reach the page, so it stays small enough to sit in the page's own margin
+    touchAreaSize: Dp = 48.dp,
 ) {
     Box(
         modifier = modifier

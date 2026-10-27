@@ -21,13 +21,13 @@
     <string name="button_save">Speichern</string>
 
     <string name="settings_idle_timeout_label">Ruhezeit-Timeout (Sekunden)</string>
-    <string name="settings_idle_timeout_desc">Zeit, nach der sich der Bildschirm aufgrund von Inaktivität verdunkelt.</string>
+    <string name="settings_idle_timeout_desc">Zeit, nach der sich der Bildschirm aufgrund von Inaktivität verdunkelt. 0 = nie.</string>
 
     <string name="settings_idle_brightness_label">Ruhehelligkeit (%)</string>
     <string name="settings_idle_brightness_desc">Helligkeitsstufe, wenn das Gerät im Ruhezustand ist. 0 = Minimum.</string>
 
     <string name="settings_active_brightness_label">Aktive Helligkeit (%)</string>
-    <string name="settings_active_brightness_desc">Helligkeitsstufe, wenn das Gerät in Gebrauch ist. 100 = Maximum.</string>
+    <string name="settings_active_brightness_desc">Helligkeitsstufe, wenn das Gerät in Gebrauch ist. 100 = Maximum. Leer lassen, um der Systemhelligkeit zu folgen.</string>
 
     <string name="settings_invalid">Bitte geben Sie gültige Werte ein</string>
 </resources>

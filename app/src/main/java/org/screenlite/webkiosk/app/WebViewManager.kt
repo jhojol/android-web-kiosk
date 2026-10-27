@@ -13,17 +13,22 @@ import android.webkit.WebView.setWebContentsDebuggingEnabled
 import androidx.annotation.RequiresApi
 import org.screenlite.webkiosk.components.RotatedWebView
 import org.screenlite.webkiosk.data.Rotation
+import org.screenlite.webkiosk.ui.theme.isTvDevice
 
 class WebViewManager(
     private val context: Context,
     private val onError: (Boolean) -> Unit,
     private val onPageLoading: (Boolean) -> Unit,
-    private val onSnapshot: (Bitmap?) -> Unit = {}
+    private val onSnapshot: (Bitmap?) -> Unit = {},
+    private val bridge: KioskBridge? = null,
+    private val onRendererGone: () -> Unit = {}
 ) {
     private var currentWebView: WebView? = null
     private var isLoading = false
     private var hasFailed = false
     private var isPageShown = false
+    // A TV shows the page at its own pixel size; on a phone or tablet the page's viewport decides
+    private val nativePixels = isTvDevice()
 
     fun createWebView(rotation: Rotation = Rotation.ROTATION_0): WebView {
         isLoading = false
@@ -44,6 +49,7 @@ class WebViewManager(
 
             configureWebViewSettings()
             setupWebViewListeners()
+            bridge?.attach(this)
         }
 
         currentWebView = webView
@@ -62,8 +68,7 @@ class WebViewManager(
             mediaPlaybackRequiresUserGesture = false
             setSupportMultipleWindows(true)
             setWebContentsDebuggingEnabled(true)
-            val displayMetrics = context.resources.displayMetrics
-            setInitialScale(calculateScale(displayMetrics))
+            if (nativePixels) setInitialScale(calculateScale(context.resources.displayMetrics))
 
             displayZoomControls = false
             builtInZoomControls = false
@@ -87,7 +92,7 @@ class WebViewManager(
                 webView.appliedRotation = rotation.degrees.toFloat()
             }
 
-            ViewportMetaInjector.inject(webView)
+            if (nativePixels) ViewportMetaInjector.inject(webView)
         }
     }
 
@@ -116,6 +121,8 @@ class WebViewManager(
             private val revealRunnable = Runnable {
                 isLoading = false
                 isPageShown = !hasFailed
+                // A retry got through, also when the network never dropped (the server was down)
+                if (isPageShown) onError(false)
                 onPageLoading(false)
             }
 
@@ -133,7 +140,7 @@ class WebViewManager(
 
             override fun onPageFinished(view: WebView, url: String?) {
                 super.onPageFinished(view, url)
-                ViewportMetaInjector.inject(view)
+                if (nativePixels) ViewportMetaInjector.inject(view)
                 view.removeCallbacks(revealRunnable)
                 view.postDelayed(revealRunnable, 1000)
             }
@@ -164,6 +171,15 @@ class WebViewManager(
                         "Subresource failed: ${request.url}, code=${error.errorCode}, desc=${error.description}"
                     )
                 }
+            }
+
+            @RequiresApi(Build.VERSION_CODES.O)
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                // Unhandled, the whole app goes down with the page; a new WebView takes its place instead
+                Log.e("WebViewManager", "Renderer gone (crashed=${detail.didCrash()}), rebuilding the WebView")
+                if (currentWebView === view) currentWebView = null
+                onRendererGone()
+                return true
             }
 
             override fun onScaleChanged(view: WebView, oldScale: Float, newScale: Float) {

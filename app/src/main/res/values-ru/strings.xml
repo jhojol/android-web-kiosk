@@ -21,13 +21,13 @@
     <string name="button_save">Сохранить</string>
 
     <string name="settings_idle_timeout_label">Таймаут бездействия (секунды)</string>
-    <string name="settings_idle_timeout_desc">Время, по истечении которого экран тускнеет из-за бездействия.</string>
+    <string name="settings_idle_timeout_desc">Время, по истечении которого экран тускнеет из-за бездействия. 0 = никогда.</string>
 
     <string name="settings_idle_brightness_label">Яркость в режиме ожидания (%)</string>
     <string name="settings_idle_brightness_desc">Уровень яркости, когда устройство находится в режиме ожидания. 0 = минимум.</string>
 
     <string name="settings_active_brightness_label">Активная яркость (%)</string>
-    <string name="settings_active_brightness_desc">Уровень яркости, когда устройство используется. 100 = максимум.</string>
+    <string name="settings_active_brightness_desc">Уровень яркости, когда устройство используется. 100 = максимум. Оставьте пустым, чтобы использовать яркость системы.</string>
 
     <string name="settings_invalid">Пожалуйста, введите корректные значения</string>
 </resources>

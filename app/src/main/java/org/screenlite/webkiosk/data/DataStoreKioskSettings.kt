@@ -89,6 +89,7 @@ class DataStoreKioskSettings(private val context: Context) : KioskSettings {
     }
 
     override suspend fun setActiveBrightness(brightness: Int) {
-        context.dataStore.edit { prefs -> prefs[keyActiveBrightness] = brightness.coerceIn(0, 100) }
+        // Below 0 follows the system brightness
+        context.dataStore.edit { prefs -> prefs[keyActiveBrightness] = if (brightness < 0) -1 else brightness.coerceIn(0, 100) }
     }
 }

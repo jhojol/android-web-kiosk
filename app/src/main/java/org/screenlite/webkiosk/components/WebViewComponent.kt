@@ -8,6 +8,8 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
 import android.util.Log
+import org.screenlite.webkiosk.MainActivity
+import org.screenlite.webkiosk.app.KioskBridge
 import org.screenlite.webkiosk.app.WebViewManager
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.viewinterop.AndroidView
@@ -57,11 +59,24 @@ fun WebViewComponent(
     var retryTrigger by remember { mutableIntStateOf(0) }
     var snapshot by remember { mutableStateOf<ImageBitmap?>(null) }
 
+    val bridge = remember {
+        KioskBridge(activity, url) { level -> (activity as? MainActivity)?.idleController?.setPageBrightness(level) }
+    }
+    DisposableEffect(Unit) {
+        onDispose { bridge.release() }
+    }
+
     val webViewManager = remember {
         WebViewManager(
             activity,
+            bridge = bridge,
+            onRendererGone = {
+                // Into a new WebView, as a retry does
+                hasLoadedPage = false
+                retryTrigger++
+            },
             onError = { err ->
-                Log.e(TAG, "WebView error: $err")
+                if (err) Log.e(TAG, "WebView error") else Log.d(TAG, "WebView error cleared")
                 hasError = err
                 if (err) {
                     hasLoadedPage = false
@@ -156,6 +171,8 @@ fun WebViewComponent(
                 Log.d(TAG, "Creating WebView (rotation=$rotation)")
                 webViewManager.createWebView(rotation)
             },
+            // Every retry builds a new WebView; let the old one go
+            onRelease = { webView -> webView.destroy() },
             update = { webView ->
                 if (webView.url != url) {
                     Log.d(TAG, "Loading new URL: $url")

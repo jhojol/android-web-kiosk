@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.WindowManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -21,8 +22,12 @@ class IdleBrightnessController(
     private var idleTimeout: Long = 60_000L
     private var idleBrightness: Int = 0
     private var activeBrightness: Int = 100
+    // Set by the page through the kiosk bridge (JHome's night mode); null leaves it to the settings
+    private var pageBrightness: Int? = null
+    private var idle = false
 
     private val checkIdleRunnable = Runnable {
+        idle = true
         Log.d(TAG, "Idle timeout reached → switching to idle brightness: $idleBrightness%")
         setBrightness(idleBrightness)
         if (idleBrightness == 0) {
@@ -52,19 +57,29 @@ class IdleBrightnessController(
 
     private fun resetIdleTimer() {
         handler.removeCallbacks(checkIdleRunnable)
-        setBrightness(activeBrightness)
+        idle = false
+        setBrightness(pageBrightness ?: activeBrightness)
         _isIdleMode.value = false
         Log.d(
             TAG,
-            "Idle timer reset → switching to active brightness: $activeBrightness% (next idle in ${idleTimeout}ms)"
+            "Idle timer reset → switching to active brightness: ${pageBrightness ?: activeBrightness}% " +
+                if (idleTimeout > 0) "(next idle in ${idleTimeout}ms)" else "(never idle)"
         )
-        handler.postDelayed(checkIdleRunnable, idleTimeout)
+        // A timeout of 0 never dims
+        if (idleTimeout > 0) handler.postDelayed(checkIdleRunnable, idleTimeout)
+    }
+
+    fun setPageBrightness(level: Int?) {
+        Log.d(TAG, "Page brightness → ${level ?: "settings"}")
+        pageBrightness = level
+        if (!idle) setBrightness(level ?: activeBrightness)
     }
 
     private fun setBrightness(level: Int) {
         try {
             val lp = activity.window.attributes
-            lp.screenBrightness = level / 100f
+            // Below 0 hands the screen back to the system's brightness, auto-brightness included
+            lp.screenBrightness = if (level < 0) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else level / 100f
             activity.window.attributes = lp
             Log.d(TAG, "Screen brightness set to $level%")
         } catch (e: Exception) {

@@ -114,6 +114,7 @@ class SharedPreferencesKioskSettings(context: Context) : KioskSettings {
     }.distinctUntilChanged()
 
     override suspend fun setActiveBrightness(brightness: Int) {
-        prefs.edit { putInt(keyActiveBrightness, brightness.coerceIn(0, 100)) }
+        // Below 0 follows the system brightness
+        prefs.edit { putInt(keyActiveBrightness, if (brightness < 0) -1 else brightness.coerceIn(0, 100)) }
     }
 }

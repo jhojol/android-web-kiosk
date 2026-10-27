@@ -13,8 +13,10 @@ A simple Android kiosk browser app that displays web content in full-screen mode
 - Brings itself back to the foreground if minimized
 - Clicking and scrolling are disabled in WebView on TV
 - Supports website rotation (0°, 90°, 180°, 270°), even if the device doesn’t support orientation changes
-- Automatic retry mechanism with exponential backoff for network failures
-- Automatically injects responsive viewport meta tags
+- Automatic retry mechanism with exponential backoff for network failures, which also clears once the server answers again
+- Rebuilds the page if the WebView's renderer crashes, instead of closing the app
+- On a TV, shows the page at the screen's own pixel size (injected viewport meta tags); on phones and tablets the page's own viewport is used
+- Gives the kiosk website a small JavaScript bridge to set the screen brightness and hear the battery state (see below)
 - Special UI adaptations for Android TV devices
 - Hides system bars and navigation elements
 - Prevents device from going to sleep
@@ -64,10 +66,38 @@ Experimental support for Android 5.1 (API Level 22) and above is available, but 
 1. **Kiosk URL**: The website to display (default: https://screenlite.org)  
 2. **Check Interval**: How often the service verifies the app is active (1-99999 seconds, default: 10)  
 3. **Screen Rotation**: Display rotation angle (0°, 90°, 180°, 270°)
+4. **Idle Timeout**: Seconds without a touch before the screen dims (default: 60; 0 = never)
+5. **Idle Brightness**: Brightness when idle (default: 0%, which also blacks the screen out until it is touched)
+6. **Active Brightness**: Brightness in use (default: 100%; leave it empty to follow the system brightness, auto-brightness included)
+
+For a dashboard that should stay readable, set the idle timeout to 0.
 
 ### Accessing Settings
-- **Mobile/Touch Devices**: Tap 5 times in the bottom-left corner of the screen within 2 seconds
+- **Mobile/Touch Devices**: Tap 5 times in the bottom-left corner of the screen (a 48dp square) within 2 seconds
 - **Android TV**: Use the center button on the remote 5 times within 2 seconds  
+
+## JavaScript Bridge
+
+Pages of the kiosk URL's own site (same scheme, host and port) get a `window.WebKiosk` object; other sites
+do not. It needs a WebView that supports `WEB_MESSAGE_LISTENER` (any up-to-date Android System WebView).
+Messages are JSON strings.
+
+```js
+if (window.WebKiosk) {
+  // Screen brightness in % (0–100); null hands it back to the app's settings
+  WebKiosk.postMessage(JSON.stringify({ type: 'brightness', level: 5 }));
+
+  // The battery: level 0.0–1.0, charging = on the charger (also once full)
+  WebKiosk.addEventListener('message', (event) => {
+    const message = JSON.parse(event.data);
+    if (message.type === 'battery') console.log(message.level, message.charging);
+  });
+  WebKiosk.postMessage(JSON.stringify({ type: 'hello' }));   // answered with the battery state, then every change
+}
+```
+
+The page's brightness replaces the active brightness until the page sets null or the URL changes; the idle
+brightness still wins while the screen is idle.
 
 ## Application Lifecycle
 1. **Boot**: BootReceiver starts StayOnTopService automatically  

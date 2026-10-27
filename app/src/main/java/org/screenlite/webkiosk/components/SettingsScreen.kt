@@ -48,7 +48,7 @@ fun SettingsScreen() {
         rotation = kioskSettings.getRotation().first()
         idleTimeout = kioskSettings.getIdleTimeout().first().toString()
         idleBrightness = kioskSettings.getIdleBrightness().first().toString()
-        activeBrightness = kioskSettings.getActiveBrightness().first().toString()
+        activeBrightness = kioskSettings.getActiveBrightness().first().let { if (it < 0) "" else it.toString() }
     }
 
     Scaffold(
@@ -134,8 +134,9 @@ fun SettingsScreen() {
                         val idleBrightnessValue = idleBrightness.toIntOrNull()
                         if (idleBrightnessValue == null || idleBrightnessValue !in 0..100) { idleBrightnessError = "0–100"; hasError = true }
 
-                        val activeBrightnessValue = activeBrightness.toIntOrNull()
-                        if (activeBrightnessValue == null || activeBrightnessValue !in 0..100) { activeBrightnessError = "0–100"; hasError = true }
+                        // Empty follows the system brightness
+                        val activeBrightnessValue = if (activeBrightness.isBlank()) -1 else activeBrightness.toIntOrNull()
+                        if (activeBrightnessValue == null || activeBrightnessValue > 100) { activeBrightnessError = "0–100"; hasError = true }
 
                         if (hasError) return@FocusableButton
 
@@ -292,7 +293,7 @@ fun BrightnessSettingsTab(
                     onActiveBrightnessErrorChange(null)
                 }
             },
-            placeholder = "0–100",
+            placeholder = "System",
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = activeBrightnessError != null,
             supportingText = activeBrightnessError
